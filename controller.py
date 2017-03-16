@@ -35,13 +35,17 @@ class Controller:
 
     # callback function for reading goal paths:
     def path_goal_callback(self, msg):
-        if len(msg.poses) > 0:
+        if len(msg.poses) > 1:
             self.goal_path = msg.poses
             self.path_length = len(self.goal_path)
-            if self.path_length > 1:
-                self.next_pose_index = 1
-            else:
-                self.next_pose_index = 0
+            self.next_pose_index = 1
+        # if len(msg.poses) > 0:
+        #     self.goal_path = msg.poses
+        #     self.path_length = len(self.goal_path)
+        #     if self.path_length > 1:
+        #         self.next_pose_index = 1
+        #     else:
+        #         self.next_pose_index = 0
 
     def wrapToPi(self, a):
         if isinstance(a, list):    # backwards compatibility for lists (distinct from np.array)
@@ -111,29 +115,55 @@ class Controller:
         self.robot_pose = [self.x, self.y, self.theta]
 
     def update_goal_pose(self):
+        goal_path = self.goal_path
         if self.next_pose_index == 1:
-            next_pose = self.goal_path[self.next_pose_index].pose
+            next_pose = goal_path[self.next_pose_index].pose
             x_goal = next_pose.position.x
             y_goal = next_pose.position.y
             th_goal = next_pose.orientation.w
             self.goal_pose = [x_goal, y_goal, th_goal]
             self.next_pose_index += 1
 
-        elif self.next_pose_index < self.path_length - 1:
+        elif self.next_pose_index < self.path_length:
             if self.close_enough_xy():
-                next_pose = self.goal_path[self.next_pose_index].pose
+                next_pose = goal_path[self.next_pose_index].pose
                 x_goal = next_pose.position.x
                 y_goal = next_pose.position.y
                 th_goal = next_pose.orientation.w
                 self.goal_pose = [x_goal, y_goal, th_goal]
                 self.next_pose_index += 1
 
-        elif self.next_pose_index == self.path_length - 1:
+        elif self.next_pose_index == self.path_length:
             if self.close_enough_xy() and self.close_enough_theta():
                 self.next_pose_index += 1
 
         else:
             self.goal_pose = None
+
+        # goal_path = self.goal_path
+        # if self.next_pose_index > self.path_length - 1:
+        #     self.goal_pose = None
+        #
+        # elif self.next_pose_index in [0, 1]:
+        #     next_pose = goal_path[self.next_pose_index].pose
+        #     x_goal = next_pose.position.x
+        #     y_goal = next_pose.position.y
+        #     th_goal = next_pose.orientation.w
+        #     self.goal_pose = [x_goal, y_goal, th_goal]
+        #     self.next_pose_index += 1
+        #
+        # elif self.next_pose_index < self.path_length - 1:
+        #     if self.close_enough_xy():
+        #         next_pose = goal_path[self.next_pose_index].pose
+        #         x_goal = next_pose.position.x
+        #         y_goal = next_pose.position.y
+        #         th_goal = next_pose.orientation.w
+        #         self.goal_pose = [x_goal, y_goal, th_goal]
+        #         self.next_pose_index += 1
+        #
+        # elif self.next_pose_index == self.path_length - 1:
+        #     if self.close_enough_xy() and self.close_enough_theta():
+        #         self.next_pose_index += 1
 
     def run(self):
         rate = rospy.Rate(10) # (10 Hz)

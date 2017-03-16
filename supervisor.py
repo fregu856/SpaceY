@@ -99,7 +99,7 @@ class Supervisor:
     def update_state(self):
         if self.state == "MANUAL":
             if len(self.waypoint_locations) == len(self.unique_tags):
-                if (self.wait_counter > 50):
+                if (self.wait_counter > 60):
                     self.next_tag_index = 0
                     self.state = "AUTO/SENDING"
 
@@ -111,9 +111,7 @@ class Supervisor:
         # #
         elif self.state == "AUTO/MOVING":
             if self.arrived and self.counter > 20: # (at least 2 sec between tags, to stop us from skipping tags)
-
                 self.visited_tags.append(self.mission[self.next_tag_index])
-
                 if self.next_tag_index < self.final_tag_index:
                     self.next_tag_index += 1
                     self.state = "AUTO/SENDING"
@@ -128,7 +126,6 @@ class Supervisor:
         if self.state == "MANUAL":
             if len(self.waypoint_locations) == len(self.unique_tags):
                 self.wait_counter += 1
-            pass
 
         # #
         elif self.state == "AUTO/SENDING":
@@ -139,16 +136,11 @@ class Supervisor:
             pose_msg.data = next_pose
             self.pose_pub.publish(pose_msg)
 
+        # #
         elif self.state == "AUTO/MOVING":
-            # if (self.counter % 10 == 0):
-            #     # next_tag = self.mission[self.next_tag_index]
-            #     # self.current_tag = [next_tag]
-            #     next_pose = pose_to_xyth(self.waypoint_locations[self.current_tag[0]].pose)
-            #     pose_msg = Float32MultiArray()
-            #     pose_msg.data = next_pose
-            #     self.pose_pub.publish(pose_msg)
             self.counter +=1
 
+        # #
         elif self.state == "FINISHED":
             pass
 
