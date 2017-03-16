@@ -48,6 +48,8 @@ class Supervisor:
         self.visited_tags = []
         self.current_tag = []
 
+        self.rviz_goal_pose = [0, 0, 0]
+
         self.trans_listener = tf.TransformListener()
         self.trans_broad = tf.TransformBroadcaster()
 
@@ -62,7 +64,9 @@ class Supervisor:
 
     # callback function for the pose goal sent manually from RVIZ:
     def rviz_goal_callback(self, msg):
+        rospy.logwarn("Hello!")
         if self.state == "MANUAL":
+            rospy.logwarn("Hello!")
             self.rviz_goal_pose = pose_to_xyth(msg.pose)
             # publish the rviz goal pose:
             rviz_pose_msg = Float32MultiArray()

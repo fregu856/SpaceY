@@ -57,9 +57,9 @@ class Controller:
         y_g = self.goal_pose[1]
         th_g = self.goal_pose[2]
 
-        k1 = 0.5
-        k2 = 0.5
-        k3 = 0.5
+        k1 = 0.25
+        k2 = 0.25
+        k3 = 0.25
 
         rho = np.sqrt((self.x-x_g)**2 + (self.y-y_g)**2)
         alpha = np.arctan2(self.y-y_g, self.x-x_g) - self.theta + np.pi

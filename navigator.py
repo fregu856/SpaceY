@@ -95,28 +95,30 @@ class Navigator:
             else:
                 rospy.logwarn("Could not find path")
 
-    # def check_if_free_path(self):
-    #     current_nav_path = self.nav_path
-    #     for pose_obj in current_nav_path:
-    #         xy_state = [pose_obj.pose.position.x, pose_obj.pose.position.y]
-    #         if not self.occupancy.is_free(xy_state):
-    #             self.send_pose_sp()
-    #             debug_msg = String()
-    #             debug_msg.data = "Current path not free, new path sent!"
-    #             self.debug_pub.publish(debug_msg)
-    #             break
-    #         else:
-    #             debug_msg = String()
-    #             debug_msg.data = "Current path OK"
-    #             self.debug_pub.publish(debug_msg)
+    def check_if_free_path(self):
+        current_nav_path = self.nav_path
+        for index in range(len(current_nav_path) - 1):
+            if index > 0:
+                pose_obj = current_nav_path[index]
+                xy_state = [pose_obj.pose.position.x, pose_obj.pose.position.y]
+                if not self.occupancy.is_free(xy_state):
+                    self.send_pose_sp()
+                    debug_msg = String()
+                    debug_msg.data = "Current path not free, new path sent!"
+                    self.debug_pub.publish(debug_msg)
+                    break
+                else:
+                    debug_msg = String()
+                    debug_msg.data = "Current path OK"
+                    self.debug_pub.publish(debug_msg)
 
     def run(self):
-        rospy.spin()
-        # rate = rospy.Rate(2)
-        # while not rospy.is_shutdown():
-        #     if self.nav_path is not None:
-        #         self.check_if_free_path()
-        #     rate.sleep()
+        #rospy.spin()
+        rate = rospy.Rate(2)
+        while not rospy.is_shutdown():
+            if self.nav_path is not None:
+                self.check_if_free_path()
+            rate.sleep()
 
 if __name__ == '__main__':
     nav = Navigator()
