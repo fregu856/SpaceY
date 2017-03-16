@@ -35,8 +35,8 @@ class Navigator:
         rospy.Subscriber("/turtlebot_control/nav_goal", Float32MultiArray, self.nav_sp_callback)
 
         self.pose_sp_pub = rospy.Publisher('/turtlebot_control/position_goal', Float32MultiArray, queue_size=10)
+        # create publisher to publish goal paths:
         self.nav_path_pub = rospy.Publisher('/turtlebot_control/path_goal', Path, queue_size=10)
-
         # create publisher to publish debug info:
         self.debug_pub = rospy.Publisher("/turtlebot_control/navigator_debug",
                                        String, queue_size=10)
@@ -98,16 +98,19 @@ class Navigator:
     def check_if_free_path(self):
         current_nav_path = self.nav_path
         for index in range(len(current_nav_path) - 1):
-            if index > 0:
+            if index > 0: # (don't check the first or last point, doesn't work)
                 pose_obj = current_nav_path[index]
                 xy_state = [pose_obj.pose.position.x, pose_obj.pose.position.y]
                 if not self.occupancy.is_free(xy_state):
+                    # replan and send a new path:
                     self.send_pose_sp()
+                    # publish debug info:
                     debug_msg = String()
                     debug_msg.data = "Current path not free, new path sent!"
                     self.debug_pub.publish(debug_msg)
                     break
                 else:
+                    # just publish debug info:
                     debug_msg = String()
                     debug_msg.data = "Current path OK"
                     self.debug_pub.publish(debug_msg)
@@ -117,6 +120,7 @@ class Navigator:
         rate = rospy.Rate(2)
         while not rospy.is_shutdown():
             if self.nav_path is not None:
+                # check if the current planned path is free, replan if not:
                 self.check_if_free_path()
             rate.sleep()
 

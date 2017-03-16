@@ -18,12 +18,11 @@ class Controller:
         rospy.Subscriber("/turtlebot_control/path_goal", Path,
                          self.path_goal_callback)
 
+        # create publisher to publish control commands to the turtlebot:
         self.pub = rospy.Publisher('cmd_vel_mux/input/navi', Twist, queue_size=10)
-
         # create publisher to publish debug info:
         self.debug_pub = rospy.Publisher("/turtlebot_control/controller_debug",
                                        Float32MultiArray, queue_size=10)
-
         # create publisher to publish current robot status to supervisor:
         self.status_pub = rospy.Publisher("/turtlebot_control/robot_status",
                     String, queue_size=10)
@@ -31,21 +30,16 @@ class Controller:
         self.goal_path = None
         self.goal_pose = None
 
+        # TransformListener to get the estimated robot position:
         self.trans_listener = tf.TransformListener()
 
     # callback function for reading goal paths:
     def path_goal_callback(self, msg):
-        if len(msg.poses) > 1:
-            self.goal_path = msg.poses
+        if len(msg.poses) > 1: # (skip paths that are just one point)
+            self.goal_path = msg.poses # (list of poses)
             self.path_length = len(self.goal_path)
+            # start with the second point of the path as the goal pose:
             self.next_pose_index = 1
-        # if len(msg.poses) > 0:
-        #     self.goal_path = msg.poses
-        #     self.path_length = len(self.goal_path)
-        #     if self.path_length > 1:
-        #         self.next_pose_index = 1
-        #     else:
-        #         self.next_pose_index = 0
 
     def wrapToPi(self, a):
         if isinstance(a, list):    # backwards compatibility for lists (distinct from np.array)
@@ -82,7 +76,6 @@ class Controller:
         cmd_x_dot = V
         cmd_theta_dot = om
 
-        # end of what you need to modify
         cmd = Twist()
         cmd.linear.x = cmd_x_dot
         cmd.angular.z = cmd_theta_dot
@@ -102,6 +95,7 @@ class Controller:
             return False
 
     def update_robot_pose(self):
+        # get the current estimated robot pose:
         try:
             (position, quaternion) = self.trans_listener.lookupTransform(
                         "/map", "/base_footprint", rospy.Time(0))
@@ -116,7 +110,9 @@ class Controller:
 
     def update_goal_pose(self):
         goal_path = self.goal_path
+
         if self.next_pose_index == 1:
+            # set the next goal pose to be the second point on the path:
             next_pose = goal_path[self.next_pose_index].pose
             x_goal = next_pose.position.x
             y_goal = next_pose.position.y
@@ -126,6 +122,7 @@ class Controller:
 
         elif self.next_pose_index < self.path_length:
             if self.close_enough_xy():
+                # set the next next goal pose to be the next point on the path:
                 next_pose = goal_path[self.next_pose_index].pose
                 x_goal = next_pose.position.x
                 y_goal = next_pose.position.y
@@ -134,62 +131,50 @@ class Controller:
                 self.next_pose_index += 1
 
         elif self.next_pose_index == self.path_length:
+            # wait until we're close enough to the final point on the path:
             if self.close_enough_xy() and self.close_enough_theta():
                 self.next_pose_index += 1
 
         else:
+            # we have moved through each point on the path, wait for new goal:
             self.goal_pose = None
-
-        # goal_path = self.goal_path
-        # if self.next_pose_index > self.path_length - 1:
-        #     self.goal_pose = None
-        #
-        # elif self.next_pose_index in [0, 1]:
-        #     next_pose = goal_path[self.next_pose_index].pose
-        #     x_goal = next_pose.position.x
-        #     y_goal = next_pose.position.y
-        #     th_goal = next_pose.orientation.w
-        #     self.goal_pose = [x_goal, y_goal, th_goal]
-        #     self.next_pose_index += 1
-        #
-        # elif self.next_pose_index < self.path_length - 1:
-        #     if self.close_enough_xy():
-        #         next_pose = goal_path[self.next_pose_index].pose
-        #         x_goal = next_pose.position.x
-        #         y_goal = next_pose.position.y
-        #         th_goal = next_pose.orientation.w
-        #         self.goal_pose = [x_goal, y_goal, th_goal]
-        #         self.next_pose_index += 1
-        #
-        # elif self.next_pose_index == self.path_length - 1:
-        #     if self.close_enough_xy() and self.close_enough_theta():
-        #         self.next_pose_index += 1
 
     def run(self):
         rate = rospy.Rate(10) # (10 Hz)
         while not rospy.is_shutdown():
             if self.goal_pose is not None:
+                # publish the current goal pose for debug purposes:
                 debug_msg = Float32MultiArray()
                 debug_msg.data = self.goal_pose
                 self.debug_pub.publish(debug_msg)
 
+                # tell the supervisor that the robot is moving to a goal pose:
                 status_msg = String()
                 status_msg.data = "MOVING"
                 self.status_pub.publish(status_msg)
             else:
+                # publish a dummy goal pose indicating that the robot is currently
+                # not moving, for debug purposes:
                 debug_msg = Float32MultiArray()
                 debug_msg.data = [-1000.0, -1000.0, -1000.0]
                 self.debug_pub.publish(debug_msg)
 
+                # tell the supervisor that th robot is stationary (it has reached
+                # a goal pose):
                 status_msg = String()
                 status_msg.data = "STATIONARY"
                 self.status_pub.publish(status_msg)
 
+            # get the latest estimated robot pose:
             self.update_robot_pose()
 
             if self.goal_path is not None:
+                # get the pose we currently are supposed to move towards along
+                # the goal path:
                 self.update_goal_pose()
                 if self.goal_pose is not None:
+                    # get and publish the control command for moving toward the
+                    # current goal pose:
                     ctrl_output = self.get_ctrl_output()
                     self.pub.publish(ctrl_output)
             rate.sleep() # (to get loop freq. of 10 Hz)

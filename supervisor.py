@@ -19,10 +19,10 @@ class Supervisor:
     def __init__(self):
         rospy.init_node('turtlebot_supervisor', anonymous=True)
 
-        # create publisher to publish goal pose:
+        # create publisher to publish goal poses:
         self.pose_pub = rospy.Publisher("/turtlebot_control/nav_goal",
                                        Float32MultiArray, queue_size=10)
-        # create publisher to publish rviz goal pose:
+        # create publisher to publish rviz goal poses:
         self.rviz_pose_pub = rospy.Publisher("/turtlebot_control/nav_goal",
                                        Float32MultiArray, queue_size=10)
         # create publisher to publish the current state:
@@ -65,15 +65,14 @@ class Supervisor:
 
     # callback function for the pose goal sent manually from RVIZ:
     def rviz_goal_callback(self, msg):
-        rospy.logwarn("Hello!")
         if self.state == "MANUAL":
-            rospy.logwarn("Hello!")
             self.rviz_goal_pose = pose_to_xyth(msg.pose)
             # publish the rviz goal pose:
             rviz_pose_msg = Float32MultiArray()
             rviz_pose_msg.data = self.rviz_goal_pose
             self.rviz_pose_pub.publish(rviz_pose_msg)
 
+    # callback function for the current robot status sent from the controller:
     def status_callback(self, msg):
         robot_status = msg.data
         if robot_status == "MOVING":
@@ -88,6 +87,7 @@ class Supervisor:
         self.final_tag_index = len(self.mission) - 1
 
     def update_waypoints(self):
+        # update the position for all visable waypoints (tags with offset):
         for tag_number in self.mission:
             try:
                 self.waypoint_offset.header.frame_id = "/tag_{0}".format(tag_number)
@@ -98,8 +98,10 @@ class Supervisor:
     # function for updating the state in the state machine:
     def update_state(self):
         if self.state == "MANUAL":
+            # set the state to "AUTO/SENDING" if we have seen all tags we're
+            # looking for in the exploration phase:
             if len(self.waypoint_locations) == len(self.unique_tags):
-                if (self.wait_counter > 60):
+                if (self.wait_counter > 60): # (wait a few seconds)
                     self.next_tag_index = 0
                     self.state = "AUTO/SENDING"
 
@@ -122,13 +124,18 @@ class Supervisor:
             pass
 
 
+    # function for defining what the robot should do in each state:
     def execute_state(self):
         if self.state == "MANUAL":
+            # make it wait for a few seconds before we go into AUTO mode once
+            # we have found all tags in the exploration phase:
             if len(self.waypoint_locations) == len(self.unique_tags):
                 self.wait_counter += 1
 
         # #
         elif self.state == "AUTO/SENDING":
+            # publish the pose of the next tag (according to the mission spec.)
+            # as the goal pose:
             next_tag = self.mission[self.next_tag_index]
             self.current_tag = [next_tag]
             next_pose = pose_to_xyth(self.waypoint_locations[next_tag].pose)
@@ -144,10 +151,10 @@ class Supervisor:
         elif self.state == "FINISHED":
             pass
 
-    # function for actually publishing all information:
+    # function for publishing all information:
     def publish(self):
         # publish debug info:
-        # # the all tags we need to find in exploration:
+        # # all tags we need to find in exploration:
         debug_msg = Float32MultiArray()
         debug_msg.data = self.unique_tags
         self.debug_pub.publish(debug_msg)
