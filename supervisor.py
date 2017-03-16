@@ -47,6 +47,7 @@ class Supervisor:
         self.arrived = False
         self.visited_tags = []
         self.current_tag = []
+        self.wait_counter = 0
 
         self.rviz_goal_pose = [0, 0, 0]
 
@@ -98,8 +99,9 @@ class Supervisor:
     def update_state(self):
         if self.state == "MANUAL":
             if len(self.waypoint_locations) == len(self.unique_tags):
-                self.next_tag_index = 0
-                self.state = "AUTO/SENDING"
+                if (self.wait_counter > 50):
+                    self.next_tag_index = 0
+                    self.state = "AUTO/SENDING"
 
         # #
         elif self.state == "AUTO/SENDING":
@@ -109,6 +111,7 @@ class Supervisor:
         # #
         elif self.state == "AUTO/MOVING":
             if self.arrived and self.counter > 20: # (at least 2 sec between tags, to stop us from skipping tags)
+
                 self.visited_tags.append(self.mission[self.next_tag_index])
 
                 if self.next_tag_index < self.final_tag_index:
@@ -123,6 +126,8 @@ class Supervisor:
 
     def execute_state(self):
         if self.state == "MANUAL":
+            if len(self.waypoint_locations) == len(self.unique_tags):
+                self.wait_counter += 1
             pass
 
         # #
@@ -135,6 +140,13 @@ class Supervisor:
             self.pose_pub.publish(pose_msg)
 
         elif self.state == "AUTO/MOVING":
+            # if (self.counter % 10 == 0):
+            #     # next_tag = self.mission[self.next_tag_index]
+            #     # self.current_tag = [next_tag]
+            #     next_pose = pose_to_xyth(self.waypoint_locations[self.current_tag[0]].pose)
+            #     pose_msg = Float32MultiArray()
+            #     pose_msg.data = next_pose
+            #     self.pose_pub.publish(pose_msg)
             self.counter +=1
 
         elif self.state == "FINISHED":
