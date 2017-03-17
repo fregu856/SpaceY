@@ -56,7 +56,7 @@ class Supervisor:
 
         self.waypoint_locations = {}    # dictionary that caches the most updated locations of each mission waypoint
         self.waypoint_offset = PoseStamped()
-        self.waypoint_offset.pose.position.z = .4    # waypoint is located 40cm in front of the AprilTag, facing it
+        self.waypoint_offset.pose.position.z = .7    # waypoint is located 40cm in front of the AprilTag, facing it
         quat = tf.transformations.quaternion_from_euler(0., np.pi/2, np.pi/2)
         self.waypoint_offset.pose.orientation.x = quat[0]
         self.waypoint_offset.pose.orientation.y = quat[1]
@@ -112,7 +112,7 @@ class Supervisor:
 
         # #
         elif self.state == "AUTO/MOVING":
-            if self.arrived and self.counter > 20: # (at least 2 sec between tags, to stop us from skipping tags)
+            if self.arrived and self.counter > 60: # (at least 5 sec between tags, to stop us from skipping tags)
                 self.visited_tags.append(self.mission[self.next_tag_index])
                 if self.next_tag_index < self.final_tag_index:
                     self.next_tag_index += 1

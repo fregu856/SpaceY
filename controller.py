@@ -55,9 +55,9 @@ class Controller:
         y_g = self.goal_pose[1]
         th_g = self.goal_pose[2]
 
-        k1 = 0.25
-        k2 = 0.25
-        k3 = 0.25
+        k1 = 0.4
+        k2 = 0.4
+        k3 = 0.4
 
         rho = np.sqrt((self.x-x_g)**2 + (self.y-y_g)**2)
         alpha = np.arctan2(self.y-y_g, self.x-x_g) - self.theta + np.pi
@@ -89,7 +89,7 @@ class Controller:
             return False
 
     def close_enough_theta(self):
-        if np.abs(self.robot_pose[2] - self.goal_pose[2]) <= 0.4:
+        if np.abs(self.wrapToPi(self.robot_pose[2] - self.goal_pose[2])) <= 0.7:
             return True
         else:
             return False
