@@ -89,7 +89,7 @@ class Controller:
             return False
 
     def close_enough_theta(self):
-        if np.abs(self.wrapToPi(self.robot_pose[2] - self.goal_pose[2])) <= 0.7:
+        if np.abs(self.wrapToPi(self.robot_pose[2] - self.goal_pose[2])) <= 1.0:
             return True
         else:
             return False

@@ -2,6 +2,7 @@
 
 import rospy
 from std_msgs.msg import Int32MultiArray, Float32MultiArray, String
+from std_msgs.msg import Bool
 from geometry_msgs.msg import PoseStamped
 import tf
 import numpy as np
@@ -28,6 +29,8 @@ class Supervisor:
         # create publisher to publish the current state:
         self.state_pub = rospy.Publisher("/turtlebot_control/state", String,
                                          queue_size=10)
+        # create publisher to publish when the mission if successfully completed:
+        self.success_pub = rospy.Publisher('/success', Bool, queue_size=10)
         # create publisher to publish debug info:
         self.debug_pub = rospy.Publisher("/turtlebot_control/supervisor_debug",
                                        Float32MultiArray, queue_size=10)
@@ -149,7 +152,9 @@ class Supervisor:
 
         # #
         elif self.state == "FINISHED":
-            pass
+            msg = Bool()
+            msg.data = True
+            self.success_pub.publish(msg)
 
     # function for publishing all information:
     def publish(self):
